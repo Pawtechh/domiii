@@ -84,8 +84,21 @@ export function spawnThematicEnemyDeath(state, enemy) {
 }
 
 export function resolveDeaths(state, onLevelUp) {
+  let hasDead = false;
+  const enemyCount = state.enemies.length;
+  for (let i = 0; i < enemyCount; i++) {
+    if (state.enemies[i].hp <= 0) {
+      hasDead = true;
+      break;
+    }
+  }
+  if (!hasDead) return;
+
   const resolved = new Set();
-  const queue = state.enemies.filter(enemy => enemy.hp <= 0);
+  const queue = [];
+  for (let i = 0; i < enemyCount; i++) {
+    if (state.enemies[i].hp <= 0) queue.push(state.enemies[i]);
+  }
   for (let index = 0; index < queue.length; index++) {
     const enemy = queue[index];
     if (resolved.has(enemy)) continue;

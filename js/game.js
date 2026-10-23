@@ -316,6 +316,7 @@ export class Game {
     this.canvas.height = 540;
     this.lastSetup = setup;
     this.state = createRunState(setup, this.audio);
+    this.state.buildDirty = true;
     this.choice=null;this.buildSignature=null;this.updateAimButton();
     this.audio.unlock();
     this.hud.update(this.state);
@@ -394,12 +395,23 @@ export class Game {
     for (const hazard of state.hazards) hazard.life -= delta;
     state.hazards = state.hazards.filter(hazard => hazard.life > 0);
     for (const hazard of state.hazards) {
-      if (Math.hypot(hazard.x - state.player.x, hazard.y - state.player.y) < hazard.radius + state.player.radius) {
+      const pdx = hazard.x - state.player.x, pdy = hazard.y - state.player.y;
+      const pr = hazard.radius + state.player.radius;
+      if (pdx * pdx + pdy * pdy < pr * pr) {
         state.player.buffs.slowTime = Math.max(state.player.buffs.slowTime, 0.35);
       }
       if (hazard.isKetchupPuddle) {
-        for (const enemy of state.enemies) {
-          if (enemy.hp > 0 && Math.hypot(hazard.x - enemy.x, hazard.y - enemy.y) < hazard.radius + enemy.radius) {
+        const puddleCandidates = (state.spatialGrid && state.spatialGrid.totalEntities > 0)
+          ? state.spatialGrid.queryRadius(hazard.x, hazard.y, hazard.radius + 25)
+          : state.enemies;
+        const pLen = puddleCandidates.length;
+        const hr = hazard.radius;
+        for (let k = 0; k < pLen; k++) {
+          const enemy = puddleCandidates[k];
+          if (enemy.hp <= 0) continue;
+          const edx = hazard.x - enemy.x, edy = hazard.y - enemy.y;
+          const er = hr + enemy.radius;
+          if (edx * edx + edy * edy < er * er) {
             enemy.speedMultiplier = Math.min(enemy.speedMultiplier || 1, 0.55);
             if (Math.random() < 0.15) {
               enemy.hp -= 2.5 * delta * (state.player.buffs.damageMultiplier || 1);
@@ -502,6 +514,7 @@ export class Game {
   chooseAbility(ability) {
     if (!this.choice||!applyAbility(this.state.player, ability)) return;
     this.audio?.play('level');
+    this.state.buildDirty = true;
     this.dismissAbility();
     this.hud.update(this.state);
     this.renderLiveBuild();
@@ -523,6 +536,14 @@ export class Game {
   }
 
   renderLiveBuild(){
+    if (!this.state?.buildDirty && this.buildSignature) {
+      const next=primes.find(prime=>prime.level>this.state.player.level);
+      const nextLabel=next?'ACTIVA EN NIVEL '+next.level:'ACTIVAS COMPLETAS';
+      const labelNode=document.querySelector('#nextPrimeLabel');
+      if (labelNode && labelNode.textContent !== nextLabel) labelNode.textContent = nextLabel;
+      return;
+    }
+    if (this.state) this.state.buildDirty = false;
     const entries=Object.entries(this.state.player.abilities),evolution=this.state.player.weaponEvolution;
     const pickups=Object.entries(this.state.pickups||{});
     const signature=JSON.stringify(entries)+'/'+(evolution?.id||'base')+'/'+JSON.stringify(pickups);
@@ -736,7 +757,17 @@ export class Game {
     }
     drawMapObstacles(this.ctx,state);
     drawCombatFeedback(this.ctx,state,this.reducedMotion);
-    state.items.forEach(item => item.draw(this.ctx, state.time));
+
+    // Frustum / Viewport Culling Bounds (screen 960x540 + margin)
+    const minCamX = cam.x - 70, maxCamX = cam.x + 960 + 70;
+    const minCamY = cam.y - 80, maxCamY = cam.y + 540 + 80;
+
+    for (let i = 0; i < state.items.length; i++) {
+      const it = state.items[i];
+      if (it.x >= minCamX && it.x <= maxCamX && it.y >= minCamY && it.y <= maxCamY) {
+        it.draw(this.ctx, state.time);
+      }
+    }
     if (state.player.auraLevel) {
       this.ctx.strokeStyle='#86e3bf44';this.ctx.lineWidth=2;this.ctx.beginPath();this.ctx.arc(state.player.x,state.player.y,105,0,Math.PI*2);this.ctx.stroke();
     }
@@ -746,8 +777,15 @@ export class Game {
       this.ctx.beginPath();this.ctx.arc(ring.x,ring.y,ring.radius*(.25+.75*(1-remaining)),0,Math.PI*2);this.ctx.stroke();this.ctx.restore();
     }
     this.ctx.save();this.ctx.globalCompositeOperation='lighter';
-    state.projectiles.forEach((projectile) => projectile.draw(this.ctx));
+    const projLen = state.projectiles.length;
+    for (let i = 0; i < projLen; i++) {
+      const projectile = state.projectiles[i];
+      if (projectile.x >= minCamX && projectile.x <= maxCamX && projectile.y >= minCamY && projectile.y <= maxCamY) {
+        projectile.draw(this.ctx);
+      }
+    }
     for (const shot of state.enemyProjectiles) {
+      if (shot.x < minCamX || shot.x > maxCamX || shot.y < minCamY || shot.y > maxCamY) continue;
       const speed=Math.hypot(shot.vx,shot.vy)||1;
       for(let i=0;i<(shot.trail?.length||0);i++){const point=shot.trail[i],ratio=(i+1)/shot.trail.length,s=Math.max(1,shot.radius*ratio*.8);this.ctx.globalAlpha=ratio*.35;this.ctx.fillStyle=shot.color||'#ff6573';this.ctx.fillRect(point.x-s/2,point.y-s/2,s,s);}
       this.ctx.globalAlpha=1;
@@ -759,10 +797,15 @@ export class Game {
     }
     this.ctx.restore();
 
-    // Reusable sort buffer without allocation
+    // Reusable sort buffer with viewport culling (only visible actors sorted and drawn)
     this.renderSortBuffer.length = 0;
     const enemyLen = state.enemies.length;
-    for (let i = 0; i < enemyLen; i++) this.renderSortBuffer.push(state.enemies[i]);
+    for (let i = 0; i < enemyLen; i++) {
+      const e = state.enemies[i];
+      if (e.isBoss || (e.x >= minCamX && e.x <= maxCamX && e.y >= minCamY && e.y <= maxCamY)) {
+        this.renderSortBuffer.push(e);
+      }
+    }
     this.renderSortBuffer.push(state.player);
     if (state.companion) this.renderSortBuffer.push(state.companion);
     this.renderSortBuffer.sort((a,b)=>a.y-b.y);
@@ -773,6 +816,7 @@ export class Game {
     drawPrimeEffects(this.ctx,state);
     this.ctx.save();this.ctx.globalCompositeOperation='lighter';
     for (const p of state.particles) {
+      if (p.x < minCamX || p.x > maxCamX || p.y < minCamY || p.y > maxCamY) continue;
       const ratio=Math.max(0,Math.min(1,p.life/(p.maxLife||.6))),palette=p.palette||[p.color],index=Math.min(palette.length-1,Math.floor((1-ratio)*palette.length));
       this.ctx.globalAlpha = ratio;
       this.ctx.fillStyle = palette[index]||p.color;
@@ -783,7 +827,9 @@ export class Game {
     this.ctx.globalAlpha = 1;
     this.ctx.textAlign='center';
     for (const text of state.floaters) {
-      drawFloatingText(this.ctx,text,this.reducedMotion);
+      if (text.x >= minCamX && text.x <= maxCamX && text.y >= minCamY && text.y <= maxCamY) {
+        drawFloatingText(this.ctx,text,this.reducedMotion);
+      }
     }
     this.ctx.restore(); // Salimos del espacio de mundo (cámara)
 
@@ -851,24 +897,28 @@ export class Game {
     ctx.fillRect(mapX + camXRatio * mapW, mapY + camYRatio * mapH, camWRatio * mapW, camHRatio * mapH);
     ctx.strokeRect(mapX + camXRatio * mapW, mapY + camYRatio * mapH, camWRatio * mapW, camHRatio * mapH);
 
-    // 3. Items coleccionables / botines (puntos celestes / dorados)
+    // 3. Items coleccionables / botines (puntos celestes / dorados) - BATCHED
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
     for (let i = 0; i < state.items.length; i++) {
       const it = state.items[i];
-      const ix = mapX + (it.x / worldW) * mapW;
-      const iy = mapY + (it.y / worldH) * mapH;
-      ctx.fillStyle = '#38bdf8';
-      ctx.fillRect(Math.round(ix) - 1, Math.round(iy) - 1, 3, 3);
+      const ix = Math.round(mapX + (it.x / worldW) * mapW) - 1;
+      const iy = Math.round(mapY + (it.y / worldH) * mapH) - 1;
+      ctx.rect(ix, iy, 3, 3);
     }
+    ctx.fill();
 
-    // 4. Enemigos comunes (puntos rojos)
+    // 4. Enemigos comunes (puntos rojos) - BATCHED SINGLE DRAW CALL
     ctx.fillStyle = '#ff4d4d';
+    ctx.beginPath();
     for (let i = 0; i < state.enemies.length; i++) {
       const enemy = state.enemies[i];
       if (enemy.hp <= 0 || enemy.isBoss) continue;
-      const ex = mapX + (enemy.x / worldW) * mapW;
-      const ey = mapY + (enemy.y / worldH) * mapH;
-      ctx.fillRect(Math.round(ex) - 1, Math.round(ey) - 1, 2, 2);
+      const ex = Math.round(mapX + (enemy.x / worldW) * mapW) - 1;
+      const ey = Math.round(mapY + (enemy.y / worldH) * mapH) - 1;
+      ctx.rect(ex, ey, 2, 2);
     }
+    ctx.fill();
 
     // 5. Jefes (calaveras/iconos dorados grandes y pulsantes)
     for (let i = 0; i < state.enemies.length; i++) {

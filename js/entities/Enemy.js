@@ -127,30 +127,37 @@ export class Enemy {
     }
 
     // Separación entre enemigos cercanos (Anti-clumping / Boids separation O(1) con SpatialGrid)
-    if (state) {
-      let sepX = 0, sepY = 0, neighbors = 0;
-      const minDistance = this.radius * 2.2;
-      const candidates = state.spatialGrid
-        ? state.spatialGrid.queryRadius(this.x, this.y, minDistance, boidBuffer)
-        : (state.enemies || []);
-      const candLen = candidates.length;
+    // Optimización: se omite para enemigos fuera de pantalla y se amortigua en 2 frames para máxima fluidez
+    const isOffScreen = Math.abs(dx) > 580 || Math.abs(dy) > 360;
+    if (state && !isOffScreen) {
+      this.boidTick = (this.boidTick || 0) + 1;
+      if (this.boidTick % 2 === 0) {
+        let sepX = 0, sepY = 0, neighbors = 0;
+        const minDistance = this.radius * 2.2;
+        const candidates = (state.spatialGrid && state.spatialGrid.totalEntities > 0)
+          ? state.spatialGrid.queryRadius(this.x, this.y, minDistance, boidBuffer)
+          : (state.enemies || []);
+        const candLen = candidates.length;
 
-      for (let i = 0; i < candLen; i++) {
-        const other = candidates[i];
-        if (other === this || other.hp <= 0) continue;
-        const distSq = (this.x - other.x) * (this.x - other.x) + (this.y - other.y) * (this.y - other.y);
-        if (distSq < minDistance * minDistance && distSq > 0.01) {
-          const d = Math.sqrt(distSq);
-          const push = (minDistance - d) / minDistance;
-          sepX += ((this.x - other.x) / d) * push;
-          sepY += ((this.y - other.y) / d) * push;
-          neighbors++;
-          if (neighbors > 6) break;
+        for (let i = 0; i < candLen; i++) {
+          const other = candidates[i];
+          if (other === this || other.hp <= 0) continue;
+          const distSq = (this.x - other.x) * (this.x - other.x) + (this.y - other.y) * (this.y - other.y);
+          if (distSq < minDistance * minDistance && distSq > 0.01) {
+            const d = Math.sqrt(distSq);
+            const push = (minDistance - d) / minDistance;
+            sepX += ((this.x - other.x) / d) * push;
+            sepY += ((this.y - other.y) / d) * push;
+            neighbors++;
+            if (neighbors > 5) break;
+          }
         }
+        this.lastSepX = neighbors > 0 ? sepX * 0.75 : 0;
+        this.lastSepY = neighbors > 0 ? sepY * 0.75 : 0;
       }
-      if (neighbors > 0) {
-        moveX += sepX * 0.75;
-        moveY += sepY * 0.75;
+      if (this.lastSepX || this.lastSepY) {
+        moveX += this.lastSepX;
+        moveY += this.lastSepY;
       }
     }
 
@@ -175,15 +182,26 @@ export class Enemy {
         state.hazards.push({ x: this.x, y: this.y, radius: 34, life: 5 });
       }
     }
-    if (this.type.id === 'soda' && this.fuse === undefined && Math.hypot(dx, dy) < 105) this.fuse = 0.72;
+    if (this.type.id === 'soda' && this.fuse === undefined && length < 105) this.fuse = 0.72;
     if (this.fuse !== undefined && !this.exploded) this.fuse -= delta;
     if(this.role==='healer'){
       this.roleTimer-=delta;
       if(this.roleTimer<=0){
         this.roleTimer=3.4;
         let healed=false;
-        for(const ally of state.enemies){
-          if(ally!==this&&ally.hp>0&&ally.hp<ally.maxHp&&Math.hypot(ally.x-this.x,ally.y-this.y)<175){ally.hp=Math.min(ally.maxHp,ally.hp+Math.max(8,ally.maxHp*.13));healed=true;}
+        const candidates = (state.spatialGrid && state.spatialGrid.totalEntities > 0)
+          ? state.spatialGrid.queryRadius(this.x, this.y, 175, boidBuffer)
+          : (state.enemies || []);
+        const candLen = candidates.length;
+        for(let i = 0; i < candLen; i++){
+          const ally = candidates[i];
+          if(ally!==this&&ally.hp>0&&ally.hp<ally.maxHp){
+            const adx = ally.x - this.x, ady = ally.y - this.y;
+            if(adx * adx + ady * ady < 175 * 175){
+              ally.hp=Math.min(ally.maxHp,ally.hp+Math.max(8,ally.maxHp*.13));
+              healed=true;
+            }
+          }
         }
         if(healed){state.rings?.push({x:this.x,y:this.y,radius:175,life:.6,maxLife:.6,color:'#72ffa8'});state.floaters?.push({x:this.x,y:this.y-30,text:'+ CURA',life:.8,color:'#72ffa8',scale:1.1});}
       }

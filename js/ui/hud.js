@@ -10,6 +10,11 @@ export class Hud {
     this.dashControl = document.querySelector('#dashControl');
     this.dashControl.addEventListener('animationend', () => this.dashControl.classList.remove('dash-refilled'));
     this.comboMilestones = document.querySelector('#comboMilestones');
+    this.comboSteps = Array.from(this.comboMilestones.querySelectorAll('[data-combo-step]')).map(step => ({
+      el: step,
+      goal: Number(step.dataset.comboStep)
+    })).sort((a, b) => a.goal - b.goal);
+    this.previousComboStep = -1;
     this.eventBanner = document.querySelector('#eventBanner');
     const stats = document.querySelector('#hudStats');
     stats.innerHTML = '<span>TIEMPO<b id="timeValue">00:00</b></span><span>KOs<b id="killsValue">0</b></span><span>PUNTOS<b id="scoreValue">000000</b></span>';
@@ -66,10 +71,18 @@ export class Hud {
     this.set('comboMultiplier',`x${comboMultiplier.toFixed(2)}`);
     this.set('comboChain',combo?`${combo} KOs`:'INICIÁ LA RACHA');
     this.comboMilestones.dataset.active=String(combo>0);
-    this.comboMilestones.querySelectorAll('[data-combo-step]').forEach(step=>{
-      const goal=Number(step.dataset.comboStep);step.dataset.reached=String(combo>=goal);
-      step.dataset.next=String(combo<goal&&![...this.comboMilestones.querySelectorAll('[data-combo-step]')].some(other=>Number(other.dataset.comboStep)<goal&&combo<Number(other.dataset.comboStep)));
-    });
+    if (combo !== this.previousComboStep) {
+      this.previousComboStep = combo;
+      let nextFound = false;
+      for (let i = 0; i < this.comboSteps.length; i++) {
+        const item = this.comboSteps[i];
+        const reached = combo >= item.goal;
+        const isNext = !reached && !nextFound;
+        if (isNext) nextFound = true;
+        item.el.dataset.reached = String(reached);
+        item.el.dataset.next = String(isNext);
+      }
+    }
     this.nodes.comboCount.style.setProperty('--combo-left',`${Math.max(0,Math.min(1,state.comboTime/3.5))*100}%`);
     this.nodes.comboCount.dataset.active=String(combo>0);
     this.nodes.comboCount.dataset.urgent=String(combo>0&&state.comboTime<1);

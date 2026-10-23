@@ -187,15 +187,17 @@ export function autoFire(state) {
   if (state.manualAim) {
     target = state.aimPoint;
   } else {
-    // Fast O(N) linear search without array allocation (.filter().reduce() avoided)
-    let closestDist = Infinity;
+    // Fast O(N) linear search with squared distance (no Math.sqrt)
+    let closestDistSq = Infinity;
     const len = state.enemies.length;
+    const px = player.x, py = player.y;
     for (let i = 0; i < len; i++) {
       const enemy = state.enemies[i];
       if (enemy.hp > 0 && enemy.spawnTime <= 0) {
-        const d = distance(player, enemy);
-        if (d < closestDist) {
-          closestDist = d;
+        const edx = enemy.x - px, edy = enemy.y - py;
+        const dSq = edx * edx + edy * edy;
+        if (dSq < closestDistSq) {
+          closestDistSq = dSq;
           target = enemy;
         }
       }

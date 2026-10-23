@@ -85,10 +85,11 @@ function foodSprite(kind, enemy, flash = false) {
 
 export function drawFood(c, kind, x, y, scale = 1, time = 0, enemy = false, flash = false) {
   const bob = Math.round(Math.sin(time * 7 + x * .05) * 1.5);
-  c.save(); c.imageSmoothingEnabled = false;
-  c.fillStyle = '#080d1360'; c.beginPath(); c.ellipse(x, y + 23 * scale, 25 * scale, 7 * scale, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#080d1360';
+  c.beginPath();
+  c.ellipse(x, y + 23 * scale, 25 * scale, 7 * scale, 0, 0, Math.PI * 2);
+  c.fill();
   c.drawImage(foodSprite(kind, enemy, flash), Math.round(x - 32 * scale), Math.round(y - 36 * scale + bob), 64 * scale, 72 * scale);
-  c.restore();
 }
 
 export function drawWeapon(c, kind, x, y, scale = 1, angle = -.65) {

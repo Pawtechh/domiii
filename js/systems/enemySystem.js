@@ -33,7 +33,9 @@ export function updateEnemies(state, delta, canvas) {
 
   for (const enemy of state.enemies) {
     if (enemy.hp <= 0) continue;
-    enemy.slowFactor = state.player.auraLevel > 0 && Math.hypot(enemy.x-state.player.x,enemy.y-state.player.y)<105 ? Math.pow(.75,state.player.auraLevel) : 1;
+    const edx = enemy.x - state.player.x, edy = enemy.y - state.player.y;
+    const distSq = edx * edx + edy * edy;
+    enemy.slowFactor = state.player.auraLevel > 0 && distSq < 105 * 105 ? Math.pow(.75,state.player.auraLevel) : 1;
     enemy.update(delta, state.decoy||state.player, state);
     if (enemy.spawnTime > 0) continue;
     if (enemy.shotReady) {
@@ -46,13 +48,14 @@ export function updateEnemies(state, delta, canvas) {
       enemy.exploded = true;
       state.rings?.push({x:enemy.x,y:enemy.y,radius:enemy.radius+42,life:.6,color:'#ff6c70'});
       explosionBurst(state,enemy.x,enemy.y,'#ff654f',30,190);
-      if (Math.hypot(state.player.x - enemy.x, state.player.y - enemy.y) < enemy.radius + state.player.radius + 24 && state.player.takeDamage(enemy.damage)) {
+      const fuseR = enemy.radius + state.player.radius + 24;
+      if (distSq < fuseR * fuseR && state.player.takeDamage(enemy.damage)) {
         state.shake = 0.28;state.audio?.play('damage');
       }
       enemy.hp = 0;
     }
     // Modo Dios: Aniquilación automática al contacto
-    if (state.player.godMode && Math.hypot(enemy.x - state.player.x, enemy.y - state.player.y) < 130) {
+    if (state.player.godMode && distSq < 130 * 130) {
       damageEnemy(state, enemy, 9999, 'god');
       burst(state, enemy.x, enemy.y, '#ffd700', 16, 180);
       impactRing(state, enemy.x, enemy.y, '#ffd700');

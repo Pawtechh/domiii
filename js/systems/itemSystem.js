@@ -10,17 +10,22 @@ export function updateItems(state, delta, bounds) {
     state.items.push(spawnItem(bounds));
     state.itemTimer=10+Math.random()*7;
   }
-  const remaining=[];
-  for(const item of state.items){
+  let activeItems = 0;
+  const itemCount = state.items.length;
+  const px = state.player.x, py = state.player.y, pr = state.player.radius;
+  for (let i = 0; i < itemCount; i++) {
+    const item = state.items[i];
     item.update(delta);
-    if(item.life<=0)continue;
-    if(distance(item,state.player)<=item.radius+state.player.radius){
-      applyItem(state,item);
+    if (item.life <= 0) continue;
+    const dx = item.x - px, dy = item.y - py;
+    const totalR = item.radius + pr;
+    if (dx * dx + dy * dy <= totalR * totalR) {
+      applyItem(state, item);
       continue;
     }
-    remaining.push(item);
+    state.items[activeItems++] = item;
   }
-  state.items=remaining;
+  state.items.length = activeItems;
 }
 
 export function spawnItem(bounds){
@@ -63,6 +68,7 @@ function applyItem(state,item){
   }
   state.score+=Math.round(15*power);
   state.pickups[type.id]=(state.pickups[type.id]||0)+1;
+  state.buildDirty = true;
   state.itemNotice=`${item.rarity.id}: ${type.name}`;
   state.particles.push({x:item.x,y:item.y,vx:0,vy:-70,life:.55,color:item.rarity.color});
 }
