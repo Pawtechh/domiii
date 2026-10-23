@@ -83,12 +83,24 @@ function foodSprite(kind, enemy, flash = false) {
   sprites.set(key, sprite); return sprite;
 }
 
+let shadowSprite = null;
+function getShadowSprite() {
+  if (!shadowSprite) {
+    shadowSprite = document.createElement('canvas');
+    shadowSprite.width = 64;
+    shadowSprite.height = 24;
+    const sc = shadowSprite.getContext('2d');
+    sc.fillStyle = '#080d1360';
+    sc.beginPath();
+    sc.ellipse(32, 12, 25, 7, 0, 0, Math.PI * 2);
+    sc.fill();
+  }
+  return shadowSprite;
+}
+
 export function drawFood(c, kind, x, y, scale = 1, time = 0, enemy = false, flash = false) {
   const bob = Math.round(Math.sin(time * 7 + x * .05) * 1.5);
-  c.fillStyle = '#080d1360';
-  c.beginPath();
-  c.ellipse(x, y + 23 * scale, 25 * scale, 7 * scale, 0, 0, Math.PI * 2);
-  c.fill();
+  c.drawImage(getShadowSprite(), Math.round(x - 32 * scale), Math.round(y + 11 * scale), 64 * scale, 24 * scale);
   c.drawImage(foodSprite(kind, enemy, flash), Math.round(x - 32 * scale), Math.round(y - 36 * scale + bob), 64 * scale, 72 * scale);
 }
 

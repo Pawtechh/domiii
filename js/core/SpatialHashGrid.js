@@ -22,16 +22,19 @@ export class SpatialHashGrid {
     for (let i = 0; i < this.totalCells; i++) {
       this.buckets[i] = [];
     }
+    this.activeBuckets = new Array(this.totalCells);
+    this.activeCount = 0;
   }
 
   /**
-   * Clear all cells without reallocating arrays.
+   * Clear all active cells without reallocating arrays or scanning unused cells.
    */
   clear() {
     this.totalEntities = 0;
-    for (let i = 0; i < this.totalCells; i++) {
-      this.buckets[i].length = 0;
+    for (let i = 0; i < this.activeCount; i++) {
+      this.activeBuckets[i].length = 0;
     }
+    this.activeCount = 0;
   }
 
   /**
@@ -49,7 +52,11 @@ export class SpatialHashGrid {
    */
   insert(entity) {
     const idx = this._getIndex(entity.x, entity.y);
-    this.buckets[idx].push(entity);
+    const bucket = this.buckets[idx];
+    if (bucket.length === 0) {
+      this.activeBuckets[this.activeCount++] = bucket;
+    }
+    bucket.push(entity);
     this.totalEntities++;
   }
 

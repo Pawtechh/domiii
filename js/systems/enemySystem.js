@@ -25,9 +25,15 @@ export function updateEnemies(state, delta, canvas) {
 
   const canSpawn = state.modeId === 'waves' ? state.waveRest <= 0 && state.waveRemaining > 0 :
     state.modeId === 'rush' ? state.enemies.some(e=>e.isBoss) && state.enemies.length < 7 : true;
-  if (canSpawn && state.spawnTimer <= 0 && state.enemies.length < 100) {
-    spawnEnemy(state, canvas);
-    if (state.modeId === 'waves') state.waveRemaining -= 1;
+  const maxCap = state.modeId === 'rush' ? 7 :
+    state.difficulty.id === 'quemado' ? 260 :
+    state.difficulty.id === 'extra' ? 220 : 180;
+  if (canSpawn && state.spawnTimer <= 0 && state.enemies.length < maxCap) {
+    const burstCount = (state.time > 40 && state.enemies.length < maxCap - 15) ? (state.time > 100 ? 3 : 2) : 1;
+    for (let s = 0; s < burstCount && state.enemies.length < maxCap; s++) {
+      spawnEnemy(state, canvas);
+      if (state.modeId === 'waves') state.waveRemaining -= 1;
+    }
     state.spawnTimer = state.modeId === 'rush' ? 3.2 : spawnEvery;
   }
 
@@ -65,7 +71,8 @@ export function updateEnemies(state, delta, canvas) {
       }
     }
 
-    if (enemy.hp > 0 && circlesOverlap(enemy, state.player)) {
+    const collR = enemy.radius + state.player.radius;
+    if (enemy.hp > 0 && distSq <= collR * collR) {
       const player=state.player;
       if(player.dashTime>0&&enemy.lastDashSequence!==player.dashSequence){
         enemy.lastDashSequence=player.dashSequence;

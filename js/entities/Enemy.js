@@ -104,7 +104,22 @@ export class Enemy {
     }
     const dx = player.x - this.x;
     const dy = player.y - this.y;
-    const length = Math.hypot(dx, dy) || 1;
+    const isOffScreen = !this.role && this.type.id !== 'ketchup' && this.fuse === undefined && (Math.abs(dx) > 650 || Math.abs(dy) > 420);
+
+    // Camino ultrarrápido para enemigos fuera de pantalla (65-75% de la horda)
+    if (isOffScreen) {
+      const length = Math.sqrt(dx * dx + dy * dy) || 1;
+      const finalSpeed = this.speed * (this.speedMultiplier || 1) * this.slowFactor;
+      this.x += (dx / length) * finalSpeed * delta;
+      this.y += (dy / length) * finalSpeed * delta;
+      const worldW = state?.world?.width || 1920;
+      const worldH = state?.world?.height || 1080;
+      this.x = Math.max(this.radius + 6, Math.min(worldW - this.radius - 6, this.x));
+      this.y = Math.max(120 + this.radius, Math.min(worldH - this.radius - 20, this.y));
+      return;
+    }
+
+    const length = Math.sqrt(dx * dx + dy * dy) || 1;
     const supportRange=this.role==='healer'?185:this.role==='summoner'?230:0;
     const approach = this.type.id === 'ketchup' ? (length < 155 ? -.65 : length > 245 ? 1 : 0) : supportRange ? (length<supportRange-35?-.55:length>supportRange+45?1:0) : this.fuse !== undefined ? .35 : 1;
 
@@ -126,10 +141,8 @@ export class Enemy {
       moveY += tangentY * Math.sin(this.flockAngle) * 0.42;
     }
 
-    // Separación entre enemigos cercanos (Anti-clumping / Boids separation O(1) con SpatialGrid)
-    // Optimización: se omite para enemigos fuera de pantalla y se amortigua en 2 frames para máxima fluidez
-    const isOffScreen = Math.abs(dx) > 580 || Math.abs(dy) > 360;
-    if (state && !isOffScreen) {
+    // Separación entre enemigos cercanos en pantalla (Anti-clumping O(1) con SpatialGrid)
+    if (state) {
       this.boidTick = (this.boidTick || 0) + 1;
       if (this.boidTick % 2 === 0) {
         let sepX = 0, sepY = 0, neighbors = 0;
@@ -325,9 +338,8 @@ export class Enemy {
       ctx.restore();
     }
 
-    // Barra de vida: siempre visible para fuertes (hp >= 40 o boss), solo cuando dañados para débiles
-    const isStrong = this.maxHp >= 40 || this.isBoss;
-    if (this.hp >= this.maxHp && !isStrong) return;
+    // Barra de vida: siempre visible para jefes, solo cuando dañados para comunes (Zero-clutter, Zero-waste)
+    if (this.hp >= this.maxHp && !this.isBoss) return;
 
     const barWidth = this.isBoss ? this.radius * 2.5 : this.radius * 2.1;
     const barHeight = this.isBoss ? 9 : 5;

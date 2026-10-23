@@ -802,7 +802,7 @@ export class Game {
     const enemyLen = state.enemies.length;
     for (let i = 0; i < enemyLen; i++) {
       const e = state.enemies[i];
-      if (e.isBoss || (e.x >= minCamX && e.x <= maxCamX && e.y >= minCamY && e.y <= maxCamY)) {
+      if (e.hp > 0 && (e.isBoss || (e.x >= minCamX && e.x <= maxCamX && e.y >= minCamY && e.y <= maxCamY))) {
         this.renderSortBuffer.push(e);
       }
     }
@@ -897,13 +897,16 @@ export class Game {
     ctx.fillRect(mapX + camXRatio * mapW, mapY + camYRatio * mapH, camWRatio * mapW, camHRatio * mapH);
     ctx.strokeRect(mapX + camXRatio * mapW, mapY + camYRatio * mapH, camWRatio * mapW, camHRatio * mapH);
 
+    const scaleX = mapW / worldW;
+    const scaleY = mapH / worldH;
+
     // 3. Items coleccionables / botines (puntos celestes / dorados) - BATCHED
     ctx.fillStyle = '#38bdf8';
     ctx.beginPath();
     for (let i = 0; i < state.items.length; i++) {
       const it = state.items[i];
-      const ix = Math.round(mapX + (it.x / worldW) * mapW) - 1;
-      const iy = Math.round(mapY + (it.y / worldH) * mapH) - 1;
+      const ix = Math.round(mapX + it.x * scaleX) - 1;
+      const iy = Math.round(mapY + it.y * scaleY) - 1;
       ctx.rect(ix, iy, 3, 3);
     }
     ctx.fill();
@@ -911,11 +914,12 @@ export class Game {
     // 4. Enemigos comunes (puntos rojos) - BATCHED SINGLE DRAW CALL
     ctx.fillStyle = '#ff4d4d';
     ctx.beginPath();
-    for (let i = 0; i < state.enemies.length; i++) {
+    const eLen = state.enemies.length;
+    for (let i = 0; i < eLen; i++) {
       const enemy = state.enemies[i];
       if (enemy.hp <= 0 || enemy.isBoss) continue;
-      const ex = Math.round(mapX + (enemy.x / worldW) * mapW) - 1;
-      const ey = Math.round(mapY + (enemy.y / worldH) * mapH) - 1;
+      const ex = Math.round(mapX + enemy.x * scaleX) - 1;
+      const ey = Math.round(mapY + enemy.y * scaleY) - 1;
       ctx.rect(ex, ey, 2, 2);
     }
     ctx.fill();

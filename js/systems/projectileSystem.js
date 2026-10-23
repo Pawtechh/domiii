@@ -187,12 +187,16 @@ export function autoFire(state) {
   if (state.manualAim) {
     target = state.aimPoint;
   } else {
-    // Fast O(N) linear search with squared distance (no Math.sqrt)
+    // Fast O(1) SpatialGrid query with fallback to linear scan
     let closestDistSq = Infinity;
-    const len = state.enemies.length;
     const px = player.x, py = player.y;
+    const nearby = (state.spatialGrid && state.spatialGrid.totalEntities > 0)
+      ? state.spatialGrid.queryRadius(px, py, 520, hitsBuffer)
+      : state.enemies;
+    const pool = (nearby && nearby.length > 0) ? nearby : state.enemies;
+    const len = pool.length;
     for (let i = 0; i < len; i++) {
-      const enemy = state.enemies[i];
+      const enemy = pool[i];
       if (enemy.hp > 0 && enemy.spawnTime <= 0) {
         const edx = enemy.x - px, edy = enemy.y - py;
         const dSq = edx * edx + edy * edy;
