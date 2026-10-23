@@ -71,7 +71,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
   // Paletas de degradados con colores intensos y halo neón
   let stops;
   let haloColor;
-  let shadowBlur;
   let outlineColor = '#060a0e';
   const outlineWidth = Math.max(3, Math.round(fontSize * 0.26));
 
@@ -83,7 +82,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
       [1.0, '#b80028']  // Carmesí rubí profundo
     ];
     haloColor = '#ff2b00';
-    shadowBlur = 14;
     outlineColor = '#120004';
   } else if (kind === 'combo') {
     if (comboVal >= 30 || /FIEBRE/i.test(text.text)) {
@@ -94,7 +92,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
         [1.0, '#ffd700']  // Oro intenso
       ];
       haloColor = '#ff00aa';
-      shadowBlur = 18;
       outlineColor = '#100014';
     } else if (comboVal >= 20 || /CADENCIA/i.test(text.text)) {
       stops = [
@@ -104,7 +101,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
         [1.0, '#d60036']   // Rubí
       ];
       haloColor = '#ff5500';
-      shadowBlur = 16;
       outlineColor = '#140400';
     } else {
       stops = [
@@ -114,7 +110,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
         [1.0, '#0066ff']   // Azul arcade
       ];
       haloColor = '#00f2ff';
-      shadowBlur = 14;
       outlineColor = '#001018';
     }
   } else if (kind === 'fire') {
@@ -125,7 +120,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
       [1.0, '#800000']
     ];
     haloColor = '#ff4d00';
-    shadowBlur = 10;
     outlineColor = '#190300';
   } else if (kind === 'ice') {
     stops = [
@@ -135,7 +129,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
       [1.0, '#0284c7']
     ];
     haloColor = '#00e5ff';
-    shadowBlur = 10;
     outlineColor = '#011524';
   } else if (kind === 'poison') {
     stops = [
@@ -145,7 +138,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
       [1.0, '#14532d']
     ];
     haloColor = '#22c55e';
-    shadowBlur = 10;
     outlineColor = '#021808';
   } else if (kind === 'heal') {
     stops = [
@@ -155,7 +147,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
       [1.0, '#047857']
     ];
     haloColor = '#10b981';
-    shadowBlur = 12;
     outlineColor = '#011c10';
   } else if (kind === 'gain') {
     stops = [
@@ -165,7 +156,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
       [1.0, '#92400e']
     ];
     haloColor = '#eab308';
-    shadowBlur = 9;
     outlineColor = '#1a0e00';
   } else if (kind === 'dash') {
     stops = [
@@ -175,7 +165,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
       [1.0, '#0f766e']
     ];
     haloColor = '#14b8a6';
-    shadowBlur = 10;
     outlineColor = '#011917';
   } else {
     // Normal damage con degradado ámbar/oro intenso
@@ -186,7 +175,6 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
       [1.0, '#c2410c']   // Ocre cálido
     ];
     haloColor = '#f59e0b';
-    shadowBlur = 7;
     outlineColor = '#140b02';
   }
 
@@ -196,7 +184,7 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
     grad.addColorStop(offset, col);
   }
 
-  // Placa / Badge retro para avisos de COMBO importantes
+  // Placa / Badge retro para avisos de COMBO importantes (Zero-blur pixel art)
   if (kind === 'combo') {
     const metrics = ctx.measureText(text.text);
     const padX = 8;
@@ -204,11 +192,9 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
     const bw = metrics.width + padX * 2;
     const bh = fontSize + padY * 2;
     ctx.save();
-    ctx.fillStyle = 'rgba(8, 14, 18, 0.84)';
+    ctx.fillStyle = 'rgba(8, 14, 18, 0.88)';
     ctx.strokeStyle = haloColor;
     ctx.lineWidth = 2;
-    ctx.shadowColor = haloColor;
-    ctx.shadowBlur = 8;
     ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
     ctx.strokeRect(-bw / 2, -bh / 2, bw, bh);
 
@@ -221,9 +207,9 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
     ctx.restore();
   }
 
-  // 1. Sombra 3D pixel art extrusion (desplazada abajo para profundidad táctil)
+  // 1. Sombra 3D pixel art extrusion sólida (sin shadowBlur para evitar caídas de FPS)
   const extrusionY = Math.max(2, Math.round(fontSize * 0.16));
-  ctx.lineWidth = outlineWidth;
+  ctx.lineWidth = outlineWidth + 1;
   ctx.strokeStyle = '#000000';
   ctx.fillStyle = '#000000';
   ctx.strokeText(text.text, 1, extrusionY);
@@ -234,23 +220,9 @@ export function drawFloatingText(ctx, text, reducedMotion = false) {
   ctx.strokeStyle = outlineColor;
   ctx.strokeText(text.text, 0, 0);
 
-  // 3. Relleno con degradado vertical intenso y halo neón
-  ctx.shadowColor = haloColor;
-  ctx.shadowBlur = reducedMotion ? 0 : shadowBlur;
+  // 3. Relleno con degradado vertical intenso arcade
   ctx.fillStyle = grad;
   ctx.fillText(text.text, 0, 0);
-
-  // 4. Segundo destello translúcido en la mitad superior para críticos y combos
-  if (!reducedMotion && (kind === 'crit' || kind === 'combo')) {
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(-300, -fontSize * 0.65, 600, fontSize * 0.45);
-    ctx.clip();
-    ctx.fillText(text.text, 0, 0);
-    ctx.restore();
-  }
 
   ctx.restore();
 }

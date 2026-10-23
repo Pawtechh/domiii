@@ -17,13 +17,14 @@ export function drawCombatFeedback(ctx, state, reducedMotion = false) {
     for(let i=0;i<3;i++) { const x=-22-i*15;ctx.beginPath();ctx.moveTo(x-7,-12);ctx.lineTo(x,0);ctx.lineTo(x-7,12);ctx.stroke(); }
     ctx.restore();
   }
-    // Modo Dios: Aura dorada omnipotente animada
+    // Modo Dios: Aura dorada omnipotente animada (Zero-blur pixel art)
     if (p.godMode) {
       const pulse = state.time * 6;
       ctx.save();
-      // Corona de rayos dorados
+      // Corona de rayos dorados brillante sin shadowBlur
+      ctx.strokeStyle = '#ffd70044'; ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 85 + Math.sin(pulse) * 8, 0, Math.PI * 2); ctx.stroke();
       ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3;
-      ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 18;
       ctx.beginPath(); ctx.arc(p.x, p.y, 85 + Math.sin(pulse) * 8, 0, Math.PI * 2); ctx.stroke();
       ctx.strokeStyle = '#fff59d'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(p.x, p.y, 65 + Math.cos(pulse * 1.5) * 6, 0, Math.PI * 2); ctx.stroke();

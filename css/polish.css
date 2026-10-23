@@ -1315,7 +1315,7 @@ kbd { display: inline-block; border: 1px solid #556771; border-bottom-width: 3px
   z-index: 100 !important;
 }
 
-/* REGLA MAESTRA DE VISIBILIDAD: Ocultar HUD, barra de jefes y acelerón en menús y pantallas fuera de juego */
+/* REGLA MAESTRA DE VISIBILIDAD: Ocultar HUD, barra de jefes y DASH en menús y pantallas fuera de juego */
 [hidden],
 .app:not([data-playing="true"]) #bossMeter,
 .app:not([data-playing="true"]) #dashControl,
@@ -1376,7 +1376,7 @@ kbd { display: inline-block; border: 1px solid #556771; border-bottom-width: 3px
   box-shadow: 0 0 12px rgba(232, 93, 4, 0.85), inset 0 2px 0 rgba(255,255,255,0.4) !important;
 }
 
-/* BOTÓN DE ACELERÓN RETRO: POSICIONADO AL LADO DE LA BARRA DE HABILIDADES Q, E, R */
+/* BOTÓN DE DASH RETRO: POSICIONADO AL LADO DE LA BARRA DE HABILIDADES Q, E, R */
 .dash-control {
   position: absolute !important;
   left: calc(50% + 72px) !important;

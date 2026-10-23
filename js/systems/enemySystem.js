@@ -57,9 +57,12 @@ export function updateEnemies(state, delta, canvas) {
     // Modo Dios: Aniquilación automática al contacto
     if (state.player.godMode && distSq < 130 * 130) {
       damageEnemy(state, enemy, 9999, 'god');
-      burst(state, enemy.x, enemy.y, '#ffd700', 16, 180);
+      burst(state, enemy.x, enemy.y, '#ffd700', 8, 140);
       impactRing(state, enemy.x, enemy.y, '#ffd700');
-      state.floaters?.push({ x: enemy.x, y: enemy.y - 30, text: '¡EXTERMINIO!', life: 0.85, color: '#ffd700', scale: 1.35, kind: 'crit' });
+      if (!state.lastExterminioTime || state.time - state.lastExterminioTime > 0.18) {
+        state.lastExterminioTime = state.time;
+        state.floaters?.push({ x: enemy.x, y: enemy.y - 30, text: '¡EXTERMINIO!', life: 0.85, color: '#ffd700', scale: 1.35, kind: 'crit' });
+      }
     }
 
     if (enemy.hp > 0 && circlesOverlap(enemy, state.player)) {

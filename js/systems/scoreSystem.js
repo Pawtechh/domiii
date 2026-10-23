@@ -106,7 +106,7 @@ export function resolveDeaths(state, onLevelUp) {
     state.combo = (state.combo || 0) + 1; state.comboTime = 3.5;
     applyComboReward(state);
     const multiplier = Math.min(3, 1 + Math.floor(state.combo / 5) * .25);
-    if (state.combo % 5 === 0 && state.floaters) {
+    if (state.combo % 5 === 0 && state.floaters && state.floaters.length < 50) {
       state.floaters.push({
         x: state.player.x,
         y: state.player.y - 45,
@@ -120,7 +120,7 @@ export function resolveDeaths(state, onLevelUp) {
     }
     const gained = Math.round(enemy.score * state.difficulty.score * multiplier * scoreMultiplier(state));
     state.score += gained;
-    if (state.floaters && state.floaters.length < 90) {
+    if (state.floaters && state.floaters.length < 40) {
       state.floaters.push({
         x: enemy.x,
         y: enemy.y + 8,
@@ -185,7 +185,7 @@ export function resolveDeaths(state, onLevelUp) {
 export function applyComboReward(state) {
   const combo = state.combo || 0, p = state.player;
   let label = '', color = '#91ffda';
-  if (combo === 10) { p.buffs.speedMultiplier = Math.max(p.buffs.speedMultiplier, 1.35); p.buffs.speedTime = Math.max(p.buffs.speedTime, 6); label = 'COMBO 10 / ACELERON'; }
+  if (combo === 10) { p.buffs.speedMultiplier = Math.max(p.buffs.speedMultiplier, 1.35); p.buffs.speedTime = Math.max(p.buffs.speedTime, 6); label = 'COMBO 10 / DASH'; }
   if (combo === 20) { p.buffs.fireRateMultiplier = Math.min(p.buffs.fireRateMultiplier, .55); p.buffs.fireTime = Math.max(p.buffs.fireTime, 6); label = 'COMBO 20 / CADENCIA'; color = '#ffd75f'; }
   if (combo === 30) { p.buffs.damageMultiplier = Math.max(p.buffs.damageMultiplier, 1.65); p.buffs.damageTime = Math.max(p.buffs.damageTime, 8); p.comboFeverTime = Math.max(p.comboFeverTime, 8); label = 'COMBO 30 / FIEBRE DE COCINA'; color = '#ff5d9e'; }
   if (!label) return false;

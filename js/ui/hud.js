@@ -61,11 +61,12 @@ export class Hud {
     this.set('scoreValue',String(Math.floor(state.score)).padStart(6,'0'));
     this.set('timeValue',formatTime(state.time)); this.set('killsValue',String(state.kills));
     const combo = state.combo || 0;
-    if(combo>(this.previousCombo||0)){
+    const prev = this.previousCombo || 0;
+    if (combo > prev && (combo % 5 === 0 || prev === 0)) {
       this.comboMilestones.classList.remove('combo-milestones--pop');
       requestAnimationFrame(() => this.comboMilestones.classList.add('combo-milestones--pop'));
     }
-    this.previousCombo=combo;
+    this.previousCombo = combo;
     const comboMultiplier=Math.min(3,1+Math.floor(combo/5)*.25);
     this.set('comboCount',combo>0?`COMBO ${combo} / x${comboMultiplier.toFixed(2)} / ${state.comboTime.toFixed(1)}s`:'COMBO / x1');
     this.set('comboMultiplier',`x${comboMultiplier.toFixed(2)}`);

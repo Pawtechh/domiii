@@ -270,7 +270,7 @@ export class Game {
         },
         {
           key: 'ESPACIO',
-          name: 'ACELERÓN / EMBESTIDA',
+          name: 'DASH / EMBESTIDA',
           levelReq: 1,
           desc: 'Esquiva y golpea al atravesar enemigos. Recarga: 2,8 s.',
           isUnlocked: true

@@ -19,9 +19,9 @@ export const adviceList = [
   },
   {
     id: 'adv_dash',
-    title: 'El acelerón gourmet',
+    title: 'El DASH gourmet',
     badge: 'CONSEJO #2',
-    description: 'El acelerón (Espacio) te otorga inmunidad completa durante la embestida y daña a todos los enemigos que atravieses.',
+    description: 'El DASH (Espacio) te otorga inmunidad completa durante la embestida y daña a todos los enemigos que atravieses.',
     detail: 'La tecla Espacio no es solo para correr: te vuelve invulnerable por una fracción de segundo y atraviesa cualquier masa de clientes pesados haciéndoles daño. Fijate en el indicador en pantalla para saber cuándo vuelve a estar cargado.'
   },
   {

@@ -52,7 +52,7 @@ export function updateMap(state, dt) {
     if (o.warning > 0) { o.warning = Math.max(0, o.warning - dt); continue; }
     o.x += o.vx * dt; o.y += o.vy * dt; o.spin += dt * 6;
 
-    // Cancha: patear la pelota con el acelerón
+    // Cancha: patear la pelota con el DASH
     if (state.mapId === 'football' && state.player.dashTime > 0 && Math.hypot(o.x - state.player.x, o.y - state.player.y) < o.radius + state.player.radius + 18) {
       const fx = state.player.facing.x || 1, fy = state.player.facing.y || 0;
       o.vx = fx * 680;
